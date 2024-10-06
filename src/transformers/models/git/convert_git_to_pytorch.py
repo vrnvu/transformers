@@ -193,9 +193,10 @@ def prepare_img(model_name):
 
 
 def prepare_video():
-    from decord import VideoReader, cpu
+    import av
+    import numpy as np
 
-    # set seed for reproducability
+    # set seed for reproducibility
     np.random.seed(0)
 
     def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
@@ -219,13 +220,22 @@ def prepare_video():
 
     # video clip consists of 300 frames (10 seconds at 30 FPS)
     file_path = hf_hub_download(repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset")
-    videoreader = VideoReader(file_path, num_threads=1, ctx=cpu(0))
-
-    # sample 6 frames
-    videoreader.seek(0)
-    indices = sample_frame_indices(clip_len=6, frame_sample_rate=4, seg_len=len(videoreader))
-    video = videoreader.get_batch(indices).asnumpy()
-
+    
+    with av.open(file_path) as container:
+        video_stream = next(s for s in container.streams if s.type == 'video')
+        total_frames = video_stream.frames
+        
+        # sample 6 frames
+        indices = sample_frame_indices(clip_len=6, frame_sample_rate=4, seg_len=total_frames)
+        
+        frames = []
+        for i, frame in enumerate(container.decode(video=0)):
+            if i in indices:
+                frames.append(frame.to_ndarray(format='rgb24'))
+            if len(frames) == 6:
+                break
+    
+    video = np.stack(frames)
     return video
 
 
