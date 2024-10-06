@@ -194,7 +194,6 @@ def prepare_img(model_name):
 
 def prepare_video():
     import av
-    import numpy as np
 
     # set seed for reproducibility
     np.random.seed(0)
